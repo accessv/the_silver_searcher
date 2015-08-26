@@ -1,36 +1,43 @@
 #ifndef LANG_H
 #define LANG_H
 
-#define MAX_EXTENSIONS 12
-#define SINGLE_EXT_LEN 20
+#define MAX_LANG_RULE_STRING	512
+#define MAX_LANG_NAME_SIZE		32
+#define EXTA_USER_LANGS			32
 
-typedef struct {
-    const char *name;
-    const char *extensions[MAX_EXTENSIONS];
+typedef enum {
+	CASE_SENS,
+	CASE_INSENS 
+}casesens_t;
+
+typedef struct 
+{
+	int extset;
+	int isset;
+	int matchset;
+	int regexset;
+	
+	casesens_t 	ext_sens;
+	casesens_t	is_sens;
+	casesens_t 	match_sens;
+}lang_properties;
+
+typedef struct 
+{
+ 	char	name[MAX_LANG_NAME_SIZE]; 
+ 	char 	ext[MAX_LANG_RULE_STRING];
+	char 	is[MAX_LANG_RULE_STRING];
+	char 	match[MAX_LANG_RULE_STRING];
+	char 	regex[MAX_LANG_RULE_STRING];
+	lang_properties prop;
 } lang_spec_t;
 
-extern lang_spec_t langs[];
+extern lang_spec_t* langs;
 
-/**
- Return the language count.
- */
-size_t get_lang_count(void);
+int 	name_to_index(const char* name);
+void 	init_langs(void);
+int		get_lang_count(void);
+char* 	make_lang_regex(int* lang_index, int len);
+char* 	type_add(char* str, int set);
 
-/**
-Convert a NULL-terminated array of language extensions
-into a regular expression of the form \.(extension1|extension2...)$
-
-Caller is responsible for freeing the returned string.
-*/
-char *make_lang_regex(char *ext_array, size_t num_exts);
-
-
-/**
-Combine multiple file type extensions into one array.
-
-The combined result is returned through *exts*;
-*exts* is one-dimension array, which can contain up to 100 extensions;
-The number of extensions that *exts* actually contain is returned.
-*/
-size_t combine_file_extensions(size_t *extension_index, size_t len, char **exts);
 #endif

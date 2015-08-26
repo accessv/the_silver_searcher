@@ -43,6 +43,11 @@ int main(int argc, char **argv) {
     root_ignores = init_ignore(NULL, "", 0);
     out_fd = stdout;
 
+	if (argc < 2) {
+        usage();
+        exit(1);
+    }
+
     /*
      * Read and parse external config file(s), if any.  Options
      * found in config files are prepended to argv (which means that

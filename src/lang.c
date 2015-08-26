@@ -4,152 +4,341 @@
 #include "lang.h"
 #include "util.h"
 
-lang_spec_t langs[] = {
-    { "actionscript", { "as", "mxml" } },
-    { "ada", { "ada", "adb", "ads" } },
-    { "asm", { "asm", "s" } },
-    { "batch", { "bat", "cmd" } },
-    { "cc", { "c", "h", "xs" } },
-    { "cfmx", { "cfc", "cfm", "cfml" } },
-    { "clojure", { "clj", "cljs", "cljc", "cljx" } },
-    { "coffee", { "coffee", "cjsx" } },
-    { "cpp", { "cpp", "cc", "C", "cxx", "m", "hpp", "hh", "h", "H", "hxx" } },
-    { "csharp", { "cs" } },
-    { "css", { "css" } },
-    { "delphi", { "pas", "int", "dfm", "nfm", "dof", "dpk", "dproj", "groupproj", "bdsgroup", "bdsproj" } },
-    { "ebuild", { "ebuild", "eclass" } },
-    { "elisp", { "el" } },
-    { "elixir", { "ex", "exs" } },
-    { "erlang", { "erl", "hrl" } },
-    { "fortran", { "f", "f77", "f90", "f95", "f03", "for", "ftn", "fpp" } },
-    { "fsharp", { "fs", "fsi", "fsx" } },
-    { "gettext", { "po", "pot", "mo" } },
-    { "go", { "go" } },
-    { "groovy", { "groovy", "gtmpl", "gpp", "grunit" } },
-    { "haml", { "haml" } },
-    { "haskell", { "hs", "lhs" } },
-    { "hh", { "h" } },
-    { "html", { "htm", "html", "shtml", "xhtml" } },
-    { "ini", { "ini" } },
-    { "jade", { "jade" } },
-    { "java", { "java", "properties" } },
-    { "js", { "js", "jsx" } },
-    { "json", { "json" } },
-    { "jsp", { "jsp", "jspx", "jhtm", "jhtml" } },
-    { "less", { "less" } },
-    { "liquid", { "liquid" } },
-    { "lisp", { "lisp", "lsp" } },
-    { "lua", { "lua" } },
-    { "m4", { "m4" } },
-    { "make", { "Makefiles", "mk", "mak" } },
-    { "mako", { "mako" } },
-    { "markdown", { "markdown", "mdown", "mdwn", "mkdn", "mkd", "md" } },
-    { "mason", { "mas", "mhtml", "mpl", "mtxt" } },
-    { "matlab", { "m" } },
-    { "mathematica", { "m", "wl" } },
-    { "mercury", { "m", "moo" } },
-    { "nim", { "nim" } },
-    { "objc", { "m", "h" } },
-    { "objcpp", { "mm", "h" } },
-    { "ocaml", { "ml", "mli", "mll", "mly" } },
-    { "octave", { "m" } },
-    { "parrot", { "pir", "pasm", "pmc", "ops", "pod", "pg", "tg" } },
-    { "perl", { "pl", "pm", "pm6", "pod", "t" } },
-    { "php", { "php", "phpt", "php3", "php4", "php5", "phtml" } },
-    { "pike", { "pike", "pmod" } },
-    { "plone", { "pt", "cpt", "metadata", "cpy", "py" } },
-    { "puppet", { "pp" } },
-    { "python", { "py" } },
-    { "racket", { "rkt", "ss", "scm" } },
-    { "rake", { "Rakefiles" } },
-    { "rs", { "rs" } },
-    { "r", { "R", "Rmd", "Rnw", "Rtex", "Rrst" } },
-    { "ruby", { "rb", "rhtml", "rjs", "rxml", "erb", "rake", "spec" } },
-    { "rust", { "rs" } },
-    { "salt", { "sls" } },
-    { "sass", { "sass", "scss" } },
-    { "scala", { "scala" } },
-    { "scheme", { "scm", "ss" } },
-    { "shell", { "sh", "bash", "csh", "tcsh", "ksh", "zsh" } },
-    { "smalltalk", { "st" } },
-    { "sml", { "sml", "fun", "mlb", "sig" } },
-    { "sql", { "sql", "ctl" } },
-    { "stylus", { "styl" } },
-    { "swift", { "swift" } },
-    { "tcl", { "tcl", "itcl", "itk" } },
-    { "tex", { "tex", "cls", "sty" } },
-    { "tt", { "tt", "tt2", "ttml" } },
-    { "vala", { "vala", "vapi" } },
-    { "vb", { "bas", "cls", "frm", "ctl", "vb", "resx" } },
-    { "velocity", { "vm" } },
-    { "verilog", { "v", "vh", "sv" } },
-    { "vhdl", { "vhd", "vhdl" } },
-    { "vim", { "vim" } },
-    { "wsdl", { "wsdl" } },
-    { "wadl", { "wadl" } },
-    { "xml", { "xml", "dtd", "xsl", "xslt", "ent" } },
-    { "yaml", { "yaml", "yml" } }
+
+static int added_langs_ctr = 0;
+
+#define DEF_LANG_SPEC {1,0, 0, 0, CASE_SENS,CASE_SENS,CASE_SENS}
+
+
+lang_spec_t langs_tmpl[] = {
+    { "asm",     "asm|s|S",                         "",                  "", "", DEF_LANG_SPEC },
+    { "cc",      "c",                               "",                  "", "", DEF_LANG_SPEC },
+    { "hh",      "h",                               "",                  "", "", DEF_LANG_SPEC },
+    { "ch",      "c|h",                             "",                  "", "", DEF_LANG_SPEC },
+    { "chs",     "c|h|s|S",                         "",                  "", "", DEF_LANG_SPEC },
+    { "cpp",     "cpp|cc|C|cxx|m|hpp|hh|h|H|hxx",   "",                  "", "", DEF_LANG_SPEC },
+    { "css",     "css",                             "",                  "", "", DEF_LANG_SPEC },
+    { "html",    "htm|html|shtml|xhtml",            "",                  "", "", DEF_LANG_SPEC },
+    { "java",    "java|properties",                 "",                  "", "", DEF_LANG_SPEC },
+    { "json",    "json",                            "",                  "", "", DEF_LANG_SPEC },
+    { "less",    "less",                            "",                  "", "", DEF_LANG_SPEC },
+    { "lisp",    "lisp|lsp",                        "",                  "", "", DEF_LANG_SPEC },
+    { "m4",      "m4",                              "",                  "", "", DEF_LANG_SPEC },
+    { "perl",    "pl|pm|pm6|pod|t",                 "",                  "", "", DEF_LANG_SPEC },
+    { "php",     "php|phpt|php3|php4|php5|phtml",   "",                  "", "", DEF_LANG_SPEC },
+    { "python",  "py",                              "",                  "", "", DEF_LANG_SPEC },
+    { "ruby",    "rb|rhtml|rjs|rxml|erb|rake|spec", "",                  "", "", DEF_LANG_SPEC },
+    { "shell",   "sh|bash|csh|tcsh|ksh|zsh",        "",                  "", "", DEF_LANG_SPEC },
+    { "sql",     "sql|ctl",                         "",                  "", "", DEF_LANG_SPEC },
+    { "tcl",     "tcl|itcl|itk",                    "",                  "", "", DEF_LANG_SPEC },
+    { "tex",     "tex|cls|sty",                     "",                  "", "", DEF_LANG_SPEC },
+	{ "make",    "mk|make",                         "Makefile|makefile", "", "", {1, 1, 0, 0, CASE_SENS,  CASE_SENS,  CASE_INSENS}},
+	{ "makeall", "in|mk|make|config",               "Makefile|makefile", "", "", {1, 1, 0, 0, CASE_SENS,  CASE_SENS,  CASE_INSENS}},
 };
 
-size_t get_lang_count() {
-    return sizeof(langs) / sizeof(lang_spec_t);
+lang_spec_t* langs = NULL; 
+
+
+void init_langs(void)
+{
+	if(langs)
+		return;
+
+	int tmpl_lengs_num = sizeof(langs_tmpl) / sizeof(lang_spec_t);
+	
+	langs = ag_calloc( tmpl_lengs_num + EXTA_USER_LANGS , sizeof(lang_spec_t));
+
+	memcpy(langs, langs_tmpl, sizeof(langs_tmpl));
 }
 
-char *make_lang_regex(char *ext_array, size_t num_exts) {
-    int regex_capacity = 100;
-    char *regex = ag_malloc(regex_capacity);
-    int regex_length = 3;
-    int subsequent = 0;
-    char *extension;
-    size_t i;
+#define GET_SENS(NAME, _str)                                                                      \
+do {                                                                                              \
+	(_str)++;                                                                                     \
+	if(*(_str) == 'y')      {cur->prop. NAME ## _sens = 1; str+=2;}                               \
+	else if(*(_str) == 'n') {cur->prop. NAME ## _sens = 0; str+=2;}                               \
+	else die("Wrong 'type-add/set' format: sens - expected 'y' or 'n', but getting %c", *(_str)); \
+}while(0) 
 
-    strcpy(regex, "\\.(");
+#define GET_PATTERN(NAME, _str, _tmp)                   \
+do{                                                     \
+	if(cur->prop. NAME ## set)                          \
+	{                                                   \
+		int d = strlen(cur-> NAME );                    \
+		int s = strlen((_str));                         \
+		if(MAX_LANG_RULE_STRING <= (d + s + 1))         \
+			die("'type-add/set' pattren is too long");  \
+		cur-> NAME [d] = '|';                           \
+		_tmp = cur-> NAME + d + 1;                      \
+	}                                                   \
+	else                                                \
+		cur->prop. NAME ## set = 1;                     \
+}while(0)
 
-    for (i = 0; i < num_exts; ++i) {
-        extension = ext_array + i * SINGLE_EXT_LEN;
-        int extension_length = strlen(extension);
-        while (regex_length + extension_length + 3 + subsequent > regex_capacity) {
-            regex_capacity *= 2;
-            regex = ag_realloc(regex, regex_capacity);
-        }
-        if (subsequent) {
-            regex[regex_length++] = '|';
-        } else {
-            subsequent = 1;
-        }
-        strcpy(regex + regex_length, extension);
-        regex_length += extension_length;
+#define COPY_PATTERN(_tmp, _str)                        \
+do{                                                     \
+	while ((*_tmp++ = * _str++) != 0)                   \
+		if(*(_tmp - 1) == ',') *(_tmp - 1) = '|';       \
+}while(0);
+
+#define PARSE_COLON(_tmp, _buf, _str, _ok)              \
+do{                                                     \
+	_buf[0] = 0;                                        \
+	_tmp = _buf;                                        \
+	while(*_str)                                        \
+	{                                                   \
+		if(*_str == ':')                                \
+		{                                               \
+			*_tmp = 0;                                  \
+			_ok   = 1;                                  \
+			break;                                      \
+		}                                               \
+		*_tmp++ = *_str++;                              \
+	}                                                   \
+	if(!_ok || !*_buf || !*_str)                         \
+		die("'type-add/set' - wrong type drfinition");  \
+}while(0)
+
+int name_to_index(const char* name)
+{
+	int idx;
+	for(idx = 0; idx < get_lang_count(); idx++)
+	{
+		if(!strcmp(name, langs[idx].name))
+		{
+			return idx;
+		}
+	}
+	return -1;
+	
+}
+
+char* type_add(char* str, int set)
+{
+	char         buf[MAX_LANG_RULE_STRING];
+	int          OK      = 0;
+	lang_spec_t* cur     = NULL;
+	char*        tmp_str = buf;
+	int          idx     = 0;
+	
+	init_langs();
+
+	if(added_langs_ctr >= EXTA_USER_LANGS)
+		die("'type-add/set' - number of user added languages cannot exceed max (%d)", added_langs_ctr, EXTA_USER_LANGS); 
+
+	PARSE_COLON(tmp_str, buf, str, OK);
+	
+	if(strlen(buf) >= MAX_LANG_NAME_SIZE)
+		die("'type-add/set' - type name is too long");
+	
+	for(idx = 0; idx < get_lang_count(); idx++)
+	{
+		if(!strcmp(buf, langs[idx].name))
+		{
+			cur = langs + idx;
+		}
+	}
+	if(!cur)
+	{
+		cur = langs + get_lang_count(); 
+		added_langs_ctr++;
+		strcpy(cur->name, buf);
+
+	}
+	else if(set)
+	{
+		memset(cur, 0, sizeof(lang_spec_t));
+		strcpy(cur->name, buf);
+	}
+		
+	str++;
+	
+	PARSE_COLON(tmp_str, buf, str, OK);
+	
+	if(!strcmp(buf, "is"))
+	{
+		tmp_str = cur->is;
+		GET_SENS(is, str);
+		GET_PATTERN(is, str, tmp_str);
+		COPY_PATTERN(tmp_str, str);
+	}
+
+	if(!strcmp(buf, "match"))
+	{
+		tmp_str = cur->match;
+		GET_SENS(match, str);
+		GET_PATTERN(match, str, tmp_str);
+		COPY_PATTERN(tmp_str, str);
+	}
+
+	if(!strcmp(buf, "ext"))
+	{
+		tmp_str = cur->ext;
+		GET_SENS(ext , str);
+		GET_PATTERN(ext, str, tmp_str);
+		COPY_PATTERN(tmp_str, str);
+	}
+	
+    if(!strcmp(buf, "regex"))
+    {
+		str++;
+		tmp_str = cur->regex;
+		GET_PATTERN(regex, str, tmp_str);
+		strcpy(tmp_str, str);
     }
-
-    regex[regex_length++] = ')';
-    regex[regex_length++] = '$';
-    regex[regex_length++] = 0;
-    return regex;
+	
+	return cur->name;
 }
 
-size_t combine_file_extensions(size_t *extension_index, size_t len, char **exts) {
-    /* Keep it fixed as 100 for the reason that if you have more than 100
-     * file types to search, you'd better search all the files.
-     * */
-    size_t ext_capacity = 100;
-    (*exts) = (char *)ag_malloc(ext_capacity * SINGLE_EXT_LEN);
-    memset((*exts), 0, ext_capacity * SINGLE_EXT_LEN);
-    size_t num_of_extensions = 0;
 
-    size_t i;
-    for (i = 0; i < len; ++i) {
-        size_t j = 0;
-        const char *ext = langs[extension_index[i]].extensions[j];
-        do {
-            if (num_of_extensions == ext_capacity) {
-                break;
-            }
-            char *pos = (*exts) + num_of_extensions * SINGLE_EXT_LEN;
-            strncpy(pos, ext, strlen(ext));
-            ++num_of_extensions;
-            ext = langs[extension_index[i]].extensions[++j];
-        } while (ext);
-    }
-
-    return num_of_extensions;
+int get_lang_count() 
+{
+	init_langs();
+    return sizeof(langs_tmpl) / sizeof(lang_spec_t) + added_langs_ctr;
 }
+
+//char* tmp = "(^(absd|dfg)$)|\\.(hhh|in)$|(?i)(kkk|ggg)(?-i)";
+//char* tmp_is    = "(^((?i)absd|klmn(?-i)|dfg(?-i))$)";
+//char* tmp_ext   = "(\\.((?i)hhh|bbb(?-i)|in(?-i)|(?i)vv(?-i))$)";
+//char* tmp_match = "((?i)kkk(?-i)|(?-i)hhh|(?i)bbb(?-i))";
+	
+#define TMP_REG_CAPACITY   1024
+
+#define START_LEN_IS    3
+#define START_LEN_EXT   4
+#define START_LEN_MATCH 1
+#define START_LEN_REGEX 0
+
+#define REGEX_INSENS_SET        "(?i)"
+#define REGEX_INSENS_SET_LEN    4
+
+#define REGEX_SENS_SET          "(?-i)"
+#define REGEX_SENS_SET_LEN      5
+
+#define REG_RSRV                20
+
+static inline int fill_pattern(char* regexp, int len, char* pattern, int* fl, int sens)
+{
+	int ad_len = strlen(pattern);
+
+	if(TMP_REG_CAPACITY <= (len + ad_len + REG_RSRV))
+	{
+		die("Too long pattern"); 
+	}
+
+	if(!*fl)
+		*fl = 1;
+	else
+		regexp[len++] = '|';
+		
+	if(sens== CASE_INSENS)
+	{
+		strcpy(regexp + len, REGEX_INSENS_SET);
+		len += REGEX_INSENS_SET_LEN;
+	}
+	else
+	{
+		strcpy(regexp + len, REGEX_SENS_SET);
+		len += REGEX_SENS_SET_LEN;
+	}
+	
+	strcpy(regexp + len, pattern);
+	len+=ad_len;
+	strcpy(regexp + len, REGEX_SENS_SET);
+	len += REGEX_SENS_SET_LEN;
+	
+	return len;
+}
+
+char* make_lang_regex(int* lang_index, int size)
+{
+	int i,tmp;
+	static char tmp_is[TMP_REG_CAPACITY]    = {"(^("};   //close ")$)"
+	static char tmp_ext[TMP_REG_CAPACITY]   = {"(\\.("}; //close ")$)"
+	static char tmp_match[TMP_REG_CAPACITY] = {"("};     // close ")"
+	static char tmp_regex[TMP_REG_CAPACITY] = {'\0'};    // no need close
+	
+	int f_is    = 0;
+	int f_ext   = 0;
+	int f_match = 0;
+	int f_regex = 0;	
+
+	int len_is    = START_LEN_IS;
+	int len_ext   = START_LEN_EXT;
+	int len_match = START_LEN_MATCH;
+	int len_regex = START_LEN_REGEX;
+	
+	lang_spec_t* cur;
+	int len = 0;
+		
+	for(i = 0; i < size; i++)
+	{
+		if( lang_index[i] >= get_lang_count())
+			die("make_lang_regex: lang index great then lang number"); 
+		cur = langs + lang_index[i];
+
+		if(cur->prop.isset)
+			len_is = fill_pattern(tmp_is, len_is, cur->is, &f_is, cur->prop.is_sens);
+		
+		if(cur->prop.extset)
+			len_ext = fill_pattern(tmp_ext, len_ext, cur->ext, &f_ext, cur->prop.ext_sens);
+		
+		if(cur->prop.matchset)
+			len_match = fill_pattern(tmp_match, len_match, cur->match, &f_match, cur->prop.match_sens);
+		
+		if(cur->prop.regexset)
+		{
+			if(f_regex)
+				tmp_regex[len_regex++] = '|';
+			else
+				f_regex = 1;
+			
+			tmp = strlen(cur->regex);
+			
+			if(TMP_REG_CAPACITY <= (len_regex + tmp + REG_RSRV))
+			{
+				//return -1; TBD
+			}
+			strcpy(tmp_regex+len_regex, cur->regex);
+			len_regex += tmp;
+		}
+	}
+	
+	char *regex = ag_malloc(len_is + len_ext + len_match + len_regex + 20);
+
+	if(f_is)
+	{
+		strcpy(regex + len, tmp_is);
+		len += len_is;
+		strcpy(regex+len, ")$)");
+		len += 3;
+		if(f_ext || f_match || f_regex)
+			regex[len++] = '|';
+	}
+	
+	if(f_ext)
+	{
+		strcpy(regex + len, tmp_ext);
+		len += len_ext;
+		strcpy(regex + len,")$)");
+				len += 3;
+		if(f_match || f_regex)
+			regex[len++] = '|';
+	}
+	
+	if(f_match)
+	{
+		strcpy(regex + len, tmp_match);
+		len += len_match;
+		regex[len++] = ')';
+		if(f_regex)
+			regex[len++] = '|';
+	}
+	
+	if(f_regex)
+		strcpy(regex + len, tmp_regex);
+	
+	log_msg("File search regular expression is %s\n" , regex);
+
+	return regex;
+}
+
