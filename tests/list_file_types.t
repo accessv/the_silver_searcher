@@ -117,6 +117,9 @@ Language types are output:
     --make
         .Makefiles  .mk  .mak
   
+    --mako
+        .mako
+  
     --markdown
         .markdown  .mdown  .mdwn  .mkdn  .mkd  .md
   
@@ -167,6 +170,9 @@ Language types are output:
   
     --python
         .py
+  
+    --racket
+        .rkt  .ss  .scm
   
     --rake
         .Rakefiles
