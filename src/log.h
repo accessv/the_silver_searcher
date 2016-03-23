@@ -2,6 +2,7 @@
 #define LOG_H
 
 #include <stdarg.h>
+#include <execinfo.h>
 
 enum log_level {
     LOG_LEVEL_DEBUG = 10,
@@ -29,5 +30,11 @@ void log_err(const char *fmt, ...);
 
 void vplog(const unsigned int level, const char *fmt, va_list args);
 void plog(const unsigned int level, const char *fmt, ...);
+void bt(char* p , int l);
+#if 0
+#define BT() bt(__FUNCTION__, __LINE__)
+#else
+#define BT() /**/
+#endif
 
 #endif

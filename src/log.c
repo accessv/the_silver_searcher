@@ -84,3 +84,46 @@ void plog(const unsigned int level, const char *fmt, ...) {
     vplog(level, fmt, args);
     va_end(args);
 }
+
+
+void bt(char* p , int l)
+{
+	void* tracePtrs[100];
+	char buf[256];
+	int ii;
+	FILE* f;
+	int count = backtrace( tracePtrs, 100 );
+
+	// prepare command to be executed
+	// our program need to be passed after the -e parameter
+	if (print_mtx_initialized)
+		pthread_mutex_lock(&print_mtx);
+
+	printf("!!! backtrace from --> %s:%d\n", p,l);
+
+	// Print the stack trace
+	for(ii = 1; ii < count-2; ii++ )
+	{
+		sprintf (buf, "/tools/bin/addr2line -C -e /home/danbe/test/git/the_silver_searcher/ag -f -i 0x%lx", (long unsigned int) tracePtrs[ii]);
+		f = popen (buf, "r");
+
+		if(f == NULL)
+		{
+			perror (buf);
+		    if (print_mtx_initialized) 
+        		pthread_mutex_unlock(&print_mtx);
+			return;
+		}
+
+		// get function name
+		fgets(buf, 256, f);
+		printf( "  %s", buf);
+		pclose(f);
+
+	}	
+	// Free the string pointers
+    if (print_mtx_initialized)
+        pthread_mutex_unlock(&print_mtx);
+
+}
+
