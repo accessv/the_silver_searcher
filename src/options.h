@@ -10,21 +10,22 @@
 #define DEFAULT_BEFORE_LEN 2
 #define DEFAULT_CONTEXT_LEN 2
 #define DEFAULT_MAX_SEARCH_DEPTH 25
-enum case_behavior {
+
+typedef enum  {
     CASE_DEFAULT, /* Changes to CASE_SMART at the end of option parsing */
     CASE_SENSITIVE,
     CASE_INSENSITIVE,
     CASE_SMART,
     CASE_SENSITIVE_RETRY_INSENSITIVE /* for future use */
-};
+}CASE_BEHAVIOR;
 
-enum path_print_behavior {
+typedef enum {
     PATH_PRINT_DEFAULT,           /* PRINT_TOP if > 1 file being searched, else PRINT_NOTHING */
     PATH_PRINT_DEFAULT_EACH_LINE, /* PRINT_EACH_LINE if > 1 file being searched, else PRINT_NOTHING */
     PATH_PRINT_TOP,
     PATH_PRINT_EACH_LINE,
     PATH_PRINT_NOTHING
-};
+} PRINT_PATH_BEHAVIOR;
 
 typedef struct {
     int ackmate;
@@ -32,7 +33,7 @@ typedef struct {
     pcre_extra *ackmate_dir_filter_extra;
     size_t after;
     size_t before;
-    enum case_behavior casing;
+    CASE_BEHAVIOR casing;
     const char *file_search_string;
     int match_files;
     pcre *file_search_regex;

@@ -68,7 +68,7 @@ const char *boyer_moore_strnstr(const char *s, const char *find, const size_t s_
 const char *boyer_moore_strncasestr(const char *s, const char *find, const size_t s_len, const size_t f_len,
                                     const size_t alpha_skip_lookup[], const size_t *find_skip_lookup);
 
-strncmp_fp get_strstr(enum case_behavior opts);
+strncmp_fp get_strstr(CASE_BEHAVIOR opts);
 
 size_t invert_matches(const char *buf, const size_t buf_len, match_t matches[], size_t matches_len);
 void compile_study(pcre **re, pcre_extra **re_extra, char *q, const int pcre_opts, const int study_opts);

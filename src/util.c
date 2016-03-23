@@ -8,7 +8,6 @@
 #include "util.h"
 #include "config.h"
 
-
 #define CHECK_AND_RETURN(ptr)             \
     if (ptr == NULL) {                    \
         die("Memory allocation failed."); \
@@ -178,7 +177,7 @@ const char *boyer_moore_strncasestr(const char *s, const char *find, const size_
     return NULL;
 }
 
-strncmp_fp get_strstr(enum case_behavior casing) {
+strncmp_fp get_strstr(CASE_BEHAVIOR casing) {
     strncmp_fp ag_strncmp_fp = &boyer_moore_strnstr;
 
     if (casing == CASE_INSENSITIVE) {
