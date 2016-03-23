@@ -17,14 +17,23 @@
 #include "print.h"
 #include "mgi.h"
 
-const char *color_line_number = "\033[1;33m"; /* bold yellow */
-const char *color_match = "\033[30;43m";      /* black with yellow background */
-const char *color_path = "\033[1;32m";        /* bold green */
+const char *color_line_number = "\033[1;33m";    /* bold yellow */
+const char *color_match       = "\033[30;43m";   /* black with yellow background */
+const char *color_path        = "\033[1;32m";    /* bold green */
 
 /* TODO: try to obey out_fd? */
-void usage(void) {
+
+void usage(void) 
+{
+    printf("Usage: ag [FILE-TYPE] [OPTIONS] PATTERN [PATH | FILE]...\n"
+	       "Try 'ag --help' for more information or 'ag --man' for ag manual.\n\n");
+}
+
+
+void help(void) 
+{
     printf("\n");
-    printf("Usage: ag [FILE-TYPE] [OPTIONS] PATTERN [PATH]\n\n");
+    printf("Usage: ag [FILE-TYPE] [OPTIONS] PATTERN [PATH | FILE]\n\n");
 
     printf("  Recursively search for PATTERN in PATH.\n");
     printf("  Like grep or ack, but faster.\n\n");
@@ -37,7 +46,6 @@ Output Options:\n\
   -A --after [LINES]      Print lines after match (Default: 2)\n\
   -B --before [LINES]     Print lines before match (Default: 2)\n\
      --[no]break          Print newlines between matches in different files\n\
-                          (Enabled by default)\n\
   -c --count              Only print the number of matches in each file.\n\
                           (This often differs from the number of matching lines)\n\
      --[no]color          Print color codes in results (Enabled by default)\n\
@@ -47,7 +55,6 @@ Output Options:\n\
      --column             Print column numbers in results\n\
      --[no]filename       Print file names (Enabled unless searching a single file)\n\
   -H --[no]heading        Print file names before each file's matches\n\
-                          (Enabled by default)\n\
   -C --context [LINES]    Print lines before and after matches (Default: 2)\n\
      --[no]group          Same as --[no]break --[no]heading\n\
   -g PATTERN              Print filenames matching PATTERN\n\
@@ -71,11 +78,11 @@ Search Options:\n\
   -a --all-types          Search all files (doesn't include hidden files\n\
                           or patterns from ignore files)\n\
   -D --debug              Ridiculous debugging (probably not useful)\n\
-     --depth NUM          Search up to NUM directories deep (Default: 25)\n\
+  -d --depth NUM          Search up to NUM directories deep (Default: 25)\n\
   -f --follow             Follow symlinks\n\
   -F --fixed-strings      Alias for --literal for compatibility with grep\n\
   -G --file-search-regex  PATTERN Limit search to filenames matching PATTERN\n\
-     --hidden             Search hidden files (obeys .*ignore files)\n\
+  -h --hidden             Search hidden files (obeys .*ignore files)\n\
   -i --ignore-case        Match case insensitively\n\
      --ignore PATTERN     Ignore files/directories matching PATTERN\n\
                           (literal file/directory names also allowed)\n\
@@ -102,15 +109,15 @@ Search Options:\n\
 \n");
     printf("File Types:\n\
 The search can be restricted to certain types of files. Example:\n\
-  ag --html needle\n\
-  - Searches for 'needle' in files with suffix .htm, .html, .shtml or .xhtml.\n\
+  ag --cc needle\n\
+  - Searches for 'needle' in files defined as cc type.\n\
 \n\
 For a list of supported file types run:\n\
   ag --list-file-types\n\n");
 }
 
 void print_version(void) {
-    char jit = '-';
+    char jit  = '-';
     char lzma = '-';
     char zlib = '-';
 
@@ -137,10 +144,9 @@ void init_options(void) {
     opts.max_matches_per_file = 0;
     opts.max_search_depth = DEFAULT_MAX_SEARCH_DEPTH;
     opts.path_sep = '\n';
-    opts.print_break = TRUE;
-    opts.print_path = PATH_PRINT_DEFAULT;
+    opts.print_break = 0;
+    opts.print_path = PATH_PRINT_EACH_LINE;
     opts.print_line_numbers = TRUE;
-    opts.recurse_dirs = TRUE;
     opts.color_path = ag_strdup(color_path);
     opts.color_match = ag_strdup(color_match);
     opts.color_line_number = ag_strdup(color_line_number);
@@ -177,9 +183,7 @@ void cleanup_options(void) {
     }
 }
 
-static int version = 0;
 static  int useless = 0;
-static  int group = 1;
 static  int list_file_types = 0;
 
 static option_t base_longopts[] = {
@@ -200,7 +204,7 @@ static option_t base_longopts[] = {
         { "column", 				no_argument, 		&opts.column, 				1 	},
         { "context", 				optional_argument, 	NULL, 						'C' },
         { "count", 					no_argument, 		NULL, 						'c' },
-        { "debug", 					no_argument, 		&opts.debug,				'1' },
+        { "debug", 					optional_argument,	NULL,       				'D' },
         { "depth", 					required_argument, 	NULL,						'd'	},
         { "dump-all-search-files",	no_argument, 		NULL,						0	},
         { "filename", 				no_argument, 		NULL, 						0 	},
@@ -208,35 +212,31 @@ static option_t base_longopts[] = {
         { "files-with-matches", 	no_argument, 		NULL, 						'l' },
         { "files-without-matches",	no_argument, 		NULL, 						'L' },
         { "fixed-strings",			no_argument,		NULL, 						'F' },
-        { "follow", 				no_argument,		&opts.follow_symlinks, 		1 	},
-        { "group", 					no_argument, 		&group, 					1 	},
-        { "heading", 				no_argument, 		&opts.print_path, 			PATH_PRINT_TOP },
-        { "help", 					no_argument, 		NULL, 						'h' },
-        { "hidden", 				no_argument, 		&opts.search_hidden_files, 	1 	},
+        { "follow", 				no_argument,		NULL,						'f'	},
+        { "group", 					no_argument, 		NULL, 					    0 	},
+        { "heading", 				no_argument, 		NULL, 			            'H' },
+        { "help", 					no_argument, 		NULL, 						0   },
+        { "hidden", 				no_argument, 		NULL,                       0   },
         { "ignore", 				required_argument, 	NULL, 						0 	},
         { "ignore-case",			no_argument, 		NULL, 						'i' },
         { "ignore-dir", 			required_argument, 	NULL, 						0 	},
         { "invert-match", 			no_argument, 		NULL, 						'v' },
-        /* deprecated for --numbers. Remove eventually. */
+        /* deprecated for --numbers. Remove eventually.  DAN to fix + noline-numbers*/
         { "line-numbers", 			no_argument, 		&opts.print_line_numbers, 	2 	},
         { "list-file-types", 		no_argument, 		&list_file_types, 			1 	},
         { "literal", 				no_argument, 		NULL, 						'Q' },
         { "match", 					no_argument, 		&useless, 					0 	},
         { "max-count", 				required_argument, 	NULL, 						'm' },
         { "mgi", 					no_argument, 		&opts.mgi, 					1 	},
-        /* "no-" is deprecated. Remove these eventually. */
-        { "no-numbers", 			no_argument, 		&opts.print_line_numbers, FALSE },
-        { "no-recurse", 			no_argument, 		NULL, 						'n' },
         { "noaffinity", 			no_argument, 		&opts.use_thread_affinity, 	0 	},
         { "nobreak", 				no_argument, 		&opts.print_break, 			0 	},
         { "nocolor", 				no_argument, 		&opts.color, 				0 	},
         { "nofilename", 			no_argument, 		NULL, 						0 	},
         { "nofollow", 				no_argument, 		&opts.follow_symlinks, 		0 	},
-        { "nogroup", 				no_argument, 		&group, 					0 	},
+        { "nogroup", 				no_argument, 		NULL, 					    0 	},
         { "noheading",				no_argument, 		&opts.print_path, 			PATH_PRINT_EACH_LINE },
         { "nonumbers", 				no_argument, 		&opts.print_line_numbers, 	FALSE },
         { "nopager", 				no_argument, 		NULL, 						0 	},
-        { "norecurse", 				no_argument, 		NULL, 						'n' },
         { "null", 					no_argument, 		NULL, 						'0' },
         { "numbers", 				no_argument, 		&opts.print_line_numbers, 	2 	},
         { "only-matching", 			no_argument, 		NULL, 						'o' },
@@ -244,12 +244,13 @@ static option_t base_longopts[] = {
         { "pager", 					required_argument, 	NULL, 						0 	},
         { "parallel", 				no_argument, 		&opts.parallel, 			1 	},
         { "passthrough", 			no_argument, 		&opts.passthrough, 			1 	},
-        { "passthru", 				no_argument, 		&opts.passthrough, 			1 	},
         { "path-to-agignore", 		required_argument,	NULL, 						'p' },
         { "print0", 				no_argument, 		NULL, 						'0' },
         { "print-long-lines", 		no_argument, 		&opts.print_long_lines, 	1 	},
-        { "recurse", 				no_argument, 		NULL, 						'r' },
         { "search-binary", 			no_argument, 		&opts.search_binary_files, 	1 	},
+        { "search-empty-files",		no_argument, 		&opts.search_empty_files, 	1 	},
+        { "search-hidden-dirs",		no_argument, 		&opts.search_hidden_dirs, 	1 	},
+        { "search-vcs-dirs", 		no_argument, 		&opts.search_vcs_dirs, 		1 	},
         { "search-files", 			no_argument, 		&opts.search_stream, 		0 	},
         { "search-zip", 			no_argument, 		&opts.search_zip_files, 	1 	},
         { "silent", 				no_argument, 		NULL, 						0 	},
@@ -257,7 +258,7 @@ static option_t base_longopts[] = {
         { "smart-case", 			no_argument, 		NULL, 						'S' },
         { "stats", 					no_argument, 		&opts.stats,				1 	},
         { "unrestricted", 			no_argument, 		NULL, 						'u' },
-        { "version", 				no_argument, 		&version, 					1 	},
+        { "version", 				no_argument, 		NULL, 					    'V' },
         { "vimgrep", 				no_argument, 		&opts.vimgrep, 				1 	},
         { "word-regexp", 			no_argument, 		NULL, 						'w' },
         { "workers", 				required_argument,	NULL, 						0 	},
@@ -265,13 +266,11 @@ static option_t base_longopts[] = {
         { "type-set", 				required_argument,	NULL, 						0 	},
     };
 
-
 void parse_options(int argc, char **argv, char **base_paths[], char **paths[])
 {
     int ch;
     int i;
     int path_len = 0;
-    int help = 0;
     int opt_index = 0;
     char *num_end;
     const char *home_dir = getenv("HOME");
@@ -325,7 +324,9 @@ void parse_options(int argc, char **argv, char **base_paths[], char **paths[])
     if (!isatty(fileno(stdout))) 
 	{
         opts.color = 0;
-        group = 0;
+// DAN do we need below ??? - to check 
+                  //  opts.print_path = PATH_PRINT_DEFAULT_EACH_LINE;
+				//	opts.print_break = 0;
 
         /* Don't search the file that stdout is redirected to */
         rv = fstat(fileno(stdout), &statbuf);
@@ -335,8 +336,8 @@ void parse_options(int argc, char **argv, char **base_paths[], char **paths[])
         }
         opts.stdout_inode = statbuf.st_ino;
     }
-
-    while ((ch = getopt_long(argc, argv, "A:aB:C:cd:DG:g:FfHhiLlm:nop:QRrSsvVtuUwz0", longopts, &opt_index)) != -1 )
+	
+    while ((ch = getopt_long(argc, argv, "A:aB:C:cd:D:G:g:FfHhiLlm:op:QSsvVtuUwz0", longopts, &opt_index)) != -1 )
 	{
         switch (ch)
 		{
@@ -385,8 +386,15 @@ void parse_options(int argc, char **argv, char **base_paths[], char **paths[])
                 opts.print_filename_only = 1;
                 break;
             case 'D':
-                set_log_level(LOG_LEVEL_DEBUG);
-                opts.debug = 1;     /* referenced in log.h macro */
+				if(optarg) 
+				{
+					set_log_level(atoi(optarg));
+				}
+				else
+				{
+                	set_log_level(LOG_LEVEL_DEBUG);
+                	opts.debug = 1;     /* referenced in log.h macro */
+				}
                 break;
             case 'd':
 				if(optarg) {
@@ -413,8 +421,8 @@ void parse_options(int argc, char **argv, char **base_paths[], char **paths[])
                 opts.print_path = PATH_PRINT_TOP;
                 break;
             case 'h':
-                help = 1;
-                break;
+				opts.search_hidden_files = 1;
+				break;
             case 'i':
                 opts.casing = CASE_INSENSITIVE;
                 break;
@@ -428,9 +436,6 @@ void parse_options(int argc, char **argv, char **base_paths[], char **paths[])
             case 'm':
                 opts.max_matches_per_file = atoi(optarg);
                 break;
-            case 'n':
-                opts.recurse_dirs = 0;
-                break;
             case 'p':
                 opts.path_to_agignore = optarg;
                 break;
@@ -440,10 +445,6 @@ void parse_options(int argc, char **argv, char **base_paths[], char **paths[])
             case 'F':
             case 'Q':
                 opts.literal = 1;
-                break;
-            case 'R':
-            case 'r':
-                opts.recurse_dirs = 1;
                 break;
             case 'S':
                 opts.casing = CASE_SMART;
@@ -456,8 +457,9 @@ void parse_options(int argc, char **argv, char **base_paths[], char **paths[])
                 break;
             case 'u':
                 opts.search_binary_files = 1;
-                opts.search_all_files = 1;
+                opts.search_all_files    = 1;
                 opts.search_hidden_files = 1;
+				opts.search_hidden_dirs  = 1;
                 break;
             case 'U':
                 opts.skip_vcs_ignores = 1;
@@ -468,8 +470,8 @@ void parse_options(int argc, char **argv, char **base_paths[], char **paths[])
                 opts.color = 0;
                 break;
             case 'V':
-                version = 1;
-                break;
+		        print_version();
+		        exit(0);
             case 'w':
                 opts.word_regexp = 1;
                 break;
@@ -541,6 +543,17 @@ void parse_options(int argc, char **argv, char **base_paths[], char **paths[])
 					lang_count++;
     				longopts[lang_count + longopts_len] = (option_t){ NULL, 0, NULL, 0 };
                     break;
+                }else if (strcmp(longopts[opt_index].name, "group") == 0) {
+                    opts.print_path = PATH_PRINT_DEFAULT;
+    				opts.print_break = 1;
+					break;
+                }else if (strcmp(longopts[opt_index].name, "nogroup") == 0) {
+                    opts.print_path = PATH_PRINT_DEFAULT_EACH_LINE;
+					opts.print_break = 0;
+					break;
+                }else if (strcmp(longopts[opt_index].name, "help") == 0) {
+					help();
+					exit(0);
                 }
 
                 /* Continue to usage if we don't recognize the option */
@@ -552,6 +565,9 @@ void parse_options(int argc, char **argv, char **base_paths[], char **paths[])
 				if( (tmp_idx = name_to_index(longopts[opt_index].name)) >= 0 )
 				{
 					ext_index[lang_num++] = tmp_idx;
+					opts.search_all_files    = 1;
+					opts.search_hidden_files = 1;
+					opts.search_hidden_dirs  = 1;
 					break;
 				}
                 log_err("option %s does not take a value", longopts[opt_index].name);
@@ -599,18 +615,6 @@ void parse_options(int argc, char **argv, char **base_paths[], char **paths[])
         }
     }
 
-    if (help)
-	{
-        usage();
-        exit(0);
-    }
-
-    if (version) 
-	{
-        print_version();
-        exit(0);
-    }
-
     if (list_file_types) 
 	{
 		lang_count = get_lang_count();
@@ -647,17 +651,14 @@ void parse_options(int argc, char **argv, char **base_paths[], char **paths[])
         free(ignore_file_path);
     }
 
-    if (! (opts.skip_vcs_ignores || opts.mgi)) 
+    if (!(opts.skip_vcs_ignores || opts.mgi)) 
 	{
         FILE *gitconfig_file = NULL;
         size_t buf_len = 0;
         char *gitconfig_res = NULL;
 
-#ifdef _WIN32
-        gitconfig_file = popen("git config -z --path --get core.excludesfile 2>NUL", "r");
-#else
         gitconfig_file = popen("git config -z --path --get core.excludesfile 2>/dev/null", "r");
-#endif
+
         if (gitconfig_file != NULL)
 		{
             do 
@@ -690,33 +691,19 @@ void parse_options(int argc, char **argv, char **base_paths[], char **paths[])
 	{
         opts.color = 0;
         opts.print_break = 1;
-        group = 1;
         opts.search_stream = 0;
-    }
+		opts.print_path = PATH_PRINT_DEFAULT;
+   }
 
     if (opts.vimgrep) {
         opts.color = 0;
         opts.print_break = 0;
-        group = 1;
         opts.search_stream = 0;
         opts.print_path = PATH_PRINT_NOTHING;
     }
 
     if (opts.parallel) {
         opts.search_stream = 0;
-    }
-
-    if (!(opts.print_path != PATH_PRINT_DEFAULT || opts.print_break == 0))
-	{
-        if (group)
-		{
-            opts.print_break = 1;
-        } 
-		else
-		{
-            opts.print_path = PATH_PRINT_DEFAULT_EACH_LINE;
-            opts.print_break = 0;
-        }
     }
 
     if (opts.search_stream)
@@ -788,10 +775,10 @@ void parse_options(int argc, char **argv, char **base_paths[], char **paths[])
         (*base_paths)[0] = realpath(path, tmp);
         i = 1;
     }
+	
     (*paths)[i] = NULL;
     (*base_paths)[i] = NULL;
 
-#ifdef _WIN32
-    windows_use_ansi(opts.color_win_ansi);
-#endif
+
 }
+

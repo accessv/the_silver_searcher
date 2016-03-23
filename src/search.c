@@ -246,8 +246,11 @@ void search_file(const char *file_full_path) {
 
     f_len = statbuf.st_size;
 
-    if (f_len == 0) {
-        log_debug("Skipping %s: file is empty.", file_full_path);
+    if (f_len == 0 ) {
+		if(opts.search_empty_files )
+			log_warn("Skipping probably empty file %s, try grep if you think that file is not empty.", file_full_path);
+		else
+        	log_debug("Skipping %s: file is empty.", file_full_path);
         goto cleanup;
     }
 
@@ -496,8 +499,7 @@ void search_dir(ignores *ig, const char *base_path, const char *path, const int 
             pthread_cond_signal(&files_ready);
             pthread_mutex_unlock(&work_queue_mtx);
             log_debug("%s added to work queue", dir_full_path);
-        } else if (opts.recurse_dirs) {
-            if (depth < opts.max_search_depth || opts.max_search_depth == -1) {
+        } else if (depth < opts.max_search_depth ) {
                 log_debug("Searching dir %s", dir_full_path);
                 ignores *child_ig;
 #ifdef HAVE_DIRENT_DNAMLEN
@@ -520,7 +522,6 @@ void search_dir(ignores *ig, const char *base_path, const char *path, const int 
                     log_debug("Skipping %s. Use the --depth option to search deeper.", dir_full_path);
                 }
             }
-        }
 
     cleanup:
         free(dir);

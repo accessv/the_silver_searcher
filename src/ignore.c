@@ -32,6 +32,12 @@ const char *ignore_pattern_files[] = {
     NULL
 };
 
+const char *vcs_dirs[] = {
+    ".git",
+    ".svn",
+    NULL
+};
+
 int is_empty(ignores *ig) {
     return (ig->extensions_len + ig->names_len + ig->slash_names_len + ig->regexes_len + ig->slash_regexes_len == 0);
 };
@@ -150,8 +156,7 @@ void add_ignore_pattern(ignores *ig, const char *pattern) {
         patterns[i] = patterns[i - 1];
     }
     patterns[i] = ag_strndup(pattern, pattern_len);
-    log_debug("added ignore pattern %s to %s", pattern,
-              ig == root_ignores ? "root ignores" : ig->abs_path);
+    log_debug("added ignore pattern %s to %s", pattern, ig == root_ignores ? "root ignores" : ig->abs_path);
 }
 
 /* For loading git/hg ignore patterns */
@@ -265,7 +270,8 @@ static int path_ignore_search(const ignores *ig, const char *path, const char *f
     char *temp;
     size_t i;
     int match_pos;
-
+	
+BT();
     match_pos = binary_search(filename, ig->names, 0, ig->names_len);
     if (match_pos >= 0) {
         log_debug("file %s ignored because name matches static pattern %s", filename, ig->names[match_pos]);
@@ -334,46 +340,109 @@ static int path_ignore_search(const ignores *ig, const char *path, const char *f
     return rv;
 }
 
+//		log_err("DAN: %s(%d)  path=%s filename=%s",__FUNCTION__, __LINE__,  path ,filename);
+		
 /* This function is REALLY HOT. It gets called for every file */
-int filename_filter(const char *path, const struct dirent *dir, void *baton) {
-    const char *filename = dir->d_name;
-/* TODO: don't call strlen on filename every time we call filename_filter() */
-#ifdef HAVE_DIRENT_DNAMLEN
-    size_t filename_len = dir->d_namlen;
-#else
-    size_t filename_len = strlen(filename);
-#endif
-    size_t i;
-    scandir_baton_t *scandir_baton = (scandir_baton_t *)baton;
-    const ignores *ig = scandir_baton->ig;
-    const char *base_path = scandir_baton->base_path;
-    const size_t base_path_len = scandir_baton->base_path_len;
-    const char *path_start = path;
-    char *temp;
-
-    if (!opts.search_hidden_files && filename[0] == '.') {
-        return 0;
-    }
-
-    for (i = 0; evil_hardcoded_ignore_files[i] != NULL; i++) {
-        if (strcmp(filename, evil_hardcoded_ignore_files[i]) == 0) {
+int filename_filter(const char *path, const struct dirent *dir, void *baton) 
+{
+    const char		*filename = dir->d_name;
+    size_t			filename_len, i; 
+    scandir_baton_t	*scandir_baton = (scandir_baton_t *)baton;
+    const ignores	*ig = scandir_baton->ig;
+    const char		*base_path = scandir_baton->base_path;
+    const size_t	base_path_len = scandir_baton->base_path_len;
+    const char		*path_start = path;
+    char 			*temp;
+	char			*full_path;
+    struct stat 	s;
+	char 			*extension = NULL;
+	
+	//skip . and ..
+    for (i = 0; evil_hardcoded_ignore_files[i] != NULL; i++)
+	{
+        if (strcmp(filename, evil_hardcoded_ignore_files[i]) == 0) 
+		{
             return 0;
         }
     }
-
-    if (!opts.follow_symlinks && is_symlink(path, dir)) {
-        log_debug("File %s ignored becaused it's a symlink", dir->d_name);
+	
+	ag_asprintf(&full_path, "%s/%s", path, filename);
+    if(lstat(full_path, &s) != 0) 
+	{
+        free(full_path);
         return 0;
     }
+	free(full_path);
+	
+	
+	if(S_ISREG(s.st_mode))
+	{
 
-    if (is_named_pipe(path, dir)) {
-        log_debug("%s ignored because it's a named pipe", path);
-        return 0;
-    }
+	    if (!opts.search_hidden_files && filename[0] == '.') 
+		{
+			log_debug("%s/%s ignored because it's a .xxx file", path,filename);
+	        return 0;
+	    }
 
-    if (opts.search_all_files && !opts.path_to_agignore) {
-        return 1;
-    }
+	    if (opts.search_all_files && !opts.path_to_agignore) 
+		{
+			log_debug("%s/%s not ignored because search_all_files enabled", path, filename);
+	        return 1;
+	    }
+		
+		extension = strchr(filename, '.');
+		if (extension) 
+		{
+			if (extension[1])
+			{
+				// The dot is not the last character, extension starts at the next one
+				++extension;
+			}
+			else
+			{
+				// No extension
+				extension = NULL;
+			}
+		}
+	}
+	else if(S_ISDIR(s.st_mode))
+	{
+
+		if(filename[0] == '.')
+		{
+		
+			if (!opts.search_hidden_dirs) 
+			{
+				log_debug("%s/%s ignored because it's a .xxx directory", path,filename);
+	        	return 0;
+	   	 	}
+			
+			if(!opts.search_vcs_dirs)
+			{
+		    	for(i = 0; vcs_dirs[i] != NULL; i++) 
+				{
+    				if(strcmp(vcs_dirs[i], filename) == 0) 
+					{
+						log_debug("%s/%s ignored because it's a VCS direcory", path,filename);
+						return 0;
+    				}
+		    	}
+			}
+		}
+	}
+	else if(S_ISLNK(s.st_mode)) 
+	{
+		if (!opts.follow_symlinks)
+		{
+			log_debug("%s/%s ignored because it's a symlink", path,filename);
+			return 0;
+		}
+	}
+	else
+	{
+		log_debug("%s ignored because it's a not a directory or regular file or symlink", path);
+	}
+
 
     /* sort of emulate basename() for base paths that begin with '/' */
     if (base_path[0] == '/') {
@@ -394,48 +463,45 @@ int filename_filter(const char *path, const struct dirent *dir, void *baton) {
             path_start = path + i;
         }
     }
-    log_debug("path_start %s filename %s", path_start, filename);
 
-    const char *extension = strchr(filename, '.');
-    if (extension) {
-        if (extension[1]) {
-            // The dot is not the last character, extension starts at the next one
-            ++extension;
-        } else {
-            // No extension
-            extension = NULL;
-        }
-    }
+	if(ig != NULL)
+	{
+	
+    	filename_len = strlen(filename);
 
-    while (ig != NULL) {
-        if (strncmp(filename, "./", 2) == 0) {
-            filename++;
-            filename_len--;
-        }
+    	do{
+	        if (strncmp(filename, "./", 2) == 0) {
+	            filename++;
+	            filename_len--;
+	        }
+	
+	        if (extension) {
+	            int match_pos = binary_search(extension, ig->extensions, 0, ig->extensions_len);
+	            if (match_pos >= 0) {
+	               log_debug("file %s ignored because name matches extension %s", filename, ig->extensions[match_pos]);
+	                return 0;
+	            }
+	        }
+	
+	        if (path_ignore_search(ig, path_start, filename)) {
+	           return 0;
+	        }
+	
+	        if (is_directory(path, dir) && filename[filename_len - 1] != '/') {
+	            ag_asprintf(&temp, "%s/", filename);
+	            int rv = path_ignore_search(ig, path_start, temp);
+	            free(temp);
+	            if (rv) {
+	               return 0;
+	            }
+	        }
 
-        if (extension) {
-            int match_pos = binary_search(extension, ig->extensions, 0, ig->extensions_len);
-            if (match_pos >= 0) {
-                log_debug("file %s ignored because name matches extension %s", filename, ig->extensions[match_pos]);
-                return 0;
-            }
-        }
+	        ig = ig->parent;
 
-        if (path_ignore_search(ig, path_start, filename)) {
-            return 0;
-        }
+	    }while (ig != NULL);
+	}
 
-        if (is_directory(path, dir) && filename[filename_len - 1] != '/') {
-            ag_asprintf(&temp, "%s/", filename);
-            int rv = path_ignore_search(ig, path_start, temp);
-            free(temp);
-            if (rv) {
-                return 0;
-            }
-        }
-        ig = ig->parent;
-    }
+    log_debug("%s/%s not ignored",  path, filename);
 
-    log_debug("%s not ignored", filename);
     return 1;
 }
