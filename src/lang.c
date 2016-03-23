@@ -12,10 +12,10 @@ static int added_langs_ctr = 0;
 
 lang_spec_t langs_tmpl[] = {
     { "asm",     "asm|s|S",                         "",                  "", "", DEF_LANG_SPEC },
-    { "cc",      "c",                               "",                  "", "", DEF_LANG_SPEC },
-    { "hh",      "h",                               "",                  "", "", DEF_LANG_SPEC },
-    { "ch",      "c|h",                             "",                  "", "", DEF_LANG_SPEC },
-    { "chs",     "c|h|s|S",                         "",                  "", "", DEF_LANG_SPEC },
+    { "cc",      "",                                "",                  "", "(?<!\\.mod)(\\.c)$", {0, 0, 0, 1, CASE_SENS,  CASE_SENS,  CASE_SENS} },
+    { "hh",      "",                                "",                  "", "(?<!\\.mod)(\\.h)$", {0, 0, 0, 1, CASE_SENS,  CASE_SENS,  CASE_SENS}},
+    { "ch",      "",                                "",                  "", "(?<!\\.mod)(\\.(c|h))$", {0, 0, 0, 1, CASE_SENS,  CASE_SENS,  CASE_SENS}},
+    { "chs",     "",                                "",                  "", "(?<!\\.mod)(\\.(c|h|s|S))$", {0, 0, 0, 1, CASE_SENS,  CASE_SENS,  CASE_SENS} },
     { "cpp",     "cpp|cc|C|cxx|m|hpp|hh|h|H|hxx",   "",                  "", "", DEF_LANG_SPEC },
     { "css",     "css",                             "",                  "", "", DEF_LANG_SPEC },
     { "html",    "htm|html|shtml|xhtml",            "",                  "", "", DEF_LANG_SPEC },
@@ -94,8 +94,8 @@ do{                                                     \
 		}                                               \
 		*_tmp++ = *_str++;                              \
 	}                                                   \
-	if(!_ok || !*_buf || !*_str)                         \
-		die("'type-add/set' - wrong type drfinition");  \
+	if(!_ok || !*_buf || !*_str)                        \
+		die("'type-add/set' - wrong type definition");  \
 }while(0)
 
 int name_to_index(const char* name)
@@ -161,30 +161,29 @@ char* type_add(char* str, int set)
 		GET_PATTERN(is, str, tmp_str);
 		COPY_PATTERN(tmp_str, str);
 	}
-
-	if(!strcmp(buf, "match"))
+	else if(!strcmp(buf, "match"))
 	{
 		tmp_str = cur->match;
 		GET_SENS(match, str);
 		GET_PATTERN(match, str, tmp_str);
 		COPY_PATTERN(tmp_str, str);
 	}
-
-	if(!strcmp(buf, "ext"))
+	else if(!strcmp(buf, "ext"))
 	{
 		tmp_str = cur->ext;
 		GET_SENS(ext , str);
 		GET_PATTERN(ext, str, tmp_str);
 		COPY_PATTERN(tmp_str, str);
 	}
-	
-    if(!strcmp(buf, "regex"))
+	else if(!strcmp(buf, "regex"))
     {
 		str++;
 		tmp_str = cur->regex;
 		GET_PATTERN(regex, str, tmp_str);
 		strcpy(tmp_str, str);
     }
+	else
+		die("'type-add/set' - wrong pattern type (%s) should be one from  [is|match|ext|regex]", buf);
 	
 	return cur->name;
 }
@@ -200,13 +199,16 @@ int get_lang_count()
 //char* tmp_is    = "(^((?i)absd|klmn(?-i)|dfg(?-i))$)";
 //char* tmp_ext   = "(\\.((?i)hhh|bbb(?-i)|in(?-i)|(?i)vv(?-i))$)";
 //char* tmp_match = "((?i)kkk(?-i)|(?-i)hhh|(?i)bbb(?-i))";
+//(\.((?!k)|(?!c|d)|e)$)|(?!(aaaa|bbbb))|(kkk|ggg)|^((?!abcd)|rtye)$
+//(?<!\.mod)(\.c)$
+//(?i)(?<!\.mod)(\.c|H)(?-i)$
 	
 #define TMP_REG_CAPACITY   1024
 
 #define START_LEN_IS    3
 #define START_LEN_EXT   4
 #define START_LEN_MATCH 1
-#define START_LEN_REGEX 0
+#define START_LEN_REGEX 1
 
 #define REGEX_INSENS_SET        "(?i)"
 #define REGEX_INSENS_SET_LEN    4
@@ -255,7 +257,7 @@ char* make_lang_regex(int* lang_index, int size)
 	static char tmp_is[TMP_REG_CAPACITY]    = {"(^("};   //close ")$)"
 	static char tmp_ext[TMP_REG_CAPACITY]   = {"(\\.("}; //close ")$)"
 	static char tmp_match[TMP_REG_CAPACITY] = {"("};     // close ")"
-	static char tmp_regex[TMP_REG_CAPACITY] = {'\0'};    // no need close
+	static char tmp_regex[TMP_REG_CAPACITY] = {"("};     // close ")"
 	
 	int f_is    = 0;
 	int f_ext   = 0;
@@ -293,13 +295,16 @@ char* make_lang_regex(int* lang_index, int size)
 				f_regex = 1;
 			
 			tmp = strlen(cur->regex);
-			
+		
 			if(TMP_REG_CAPACITY <= (len_regex + tmp + REG_RSRV))
 			{
 				//return -1; TBD
 			}
 			strcpy(tmp_regex+len_regex, cur->regex);
+
 			len_regex += tmp;
+			strcpy(tmp_regex+len_regex,")");
+			len_regex += 1;
 		}
 	}
 	
@@ -336,7 +341,7 @@ char* make_lang_regex(int* lang_index, int size)
 	
 	if(f_regex)
 		strcpy(regex + len, tmp_regex);
-	
+
 	log_msg("File search regular expression is %s\n" , regex);
 
 	return regex;
