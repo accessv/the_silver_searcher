@@ -5,9 +5,6 @@
 #include <ctype.h>
 #include <sys/time.h>
 #include <unistd.h>
-#ifdef _WIN32
-#include <windows.h>
-#endif
 
 #include "config.h"
 
@@ -78,17 +75,11 @@ int main(int argc, char **argv) {
     }
 #endif
 
-#ifdef _WIN32
-    {
-        SYSTEM_INFO si;
-        GetSystemInfo(&si);
-        num_cores = si.dwNumberOfProcessors;
-    }
-#else
+
     num_cores = (int)sysconf(_SC_NPROCESSORS_ONLN);
-#endif
 
     workers_len = num_cores;
+
     if (opts.literal) {
         workers_len--;
     }
@@ -184,14 +175,12 @@ int main(int argc, char **argv) {
             symhash = NULL;
             ignores *ig = init_ignore(root_ignores, "", 0);
             struct stat s = {.st_dev = 0 };
-#ifndef _WIN32
             /* The device is ignored if opts.one_dev is false, so it's fine
              * to leave it at the default 0
              */
             if (opts.one_dev && lstat(paths[i], &s) == -1) {
                 log_err("Failed to get device information for path %s. Skipping...", paths[i]);
             }
-#endif
             search_dir(ig, base_paths[i], paths[i], 0, s.st_dev);
             cleanup_ignore(ig);
         }

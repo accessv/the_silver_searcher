@@ -46,11 +46,8 @@ autoload_git_ignored_files(void)
     }
 
     /* next, obtain top level locn of git repository */
-#ifdef _WIN32
-    popen_fp = popen("git rev-parse --show-toplevel 2>NULL", "r");
-#else
     popen_fp = popen("git rev-parse --show-toplevel 2>/dev/null", "r");
-#endif
+
     if (!popen_fp) {
         log_warn("--mgi: git failed to start");
         (void) free(cwd);
@@ -128,11 +125,7 @@ autoload_git_ignored_files(void)
         }
     }
 
-#ifdef _WIN32
-    popen_fp = popen("git status --ignored --porcelain 2>NULL", "r");
-#else
     popen_fp = popen("git status --ignored --porcelain 2>/dev/null", "r");
-#endif
 
     if (!popen_fp) {
         (void) free(git_tl_wd);

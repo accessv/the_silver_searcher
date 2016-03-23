@@ -9,9 +9,6 @@
 #include "options.h"
 #include "print.h"
 #include "util.h"
-#ifdef _WIN32
-#define fprintf(...) fprintf_w32(__VA_ARGS__)
-#endif
 
 int first_file_match = 1;
 

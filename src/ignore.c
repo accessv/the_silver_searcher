@@ -11,13 +11,8 @@
 #include "scandir.h"
 #include "util.h"
 
-#ifdef _WIN32
-#include <shlwapi.h>
-#define fnmatch(x, y, z) (!PathMatchSpec(y, x))
-#else
 #include <fnmatch.h>
 const int fnmatch_flags = FNM_PATHNAME;
-#endif
 
 /* TODO: build a huge-ass list of files we want to ignore by default (build cache stuff, pyc files, etc) */
 

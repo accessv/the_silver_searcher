@@ -256,25 +256,6 @@ void search_file(const char *file_full_path) {
         goto cleanup;
     }
 
-#ifdef _WIN32
-    {
-        HANDLE hmmap = CreateFileMapping(
-            (HANDLE)_get_osfhandle(fd), 0, PAGE_READONLY, 0, f_len, NULL);
-        buf = (char *)MapViewOfFile(hmmap, FILE_SHARE_READ, 0, 0, f_len);
-        if (hmmap != NULL)
-            CloseHandle(hmmap);
-    }
-    if (buf == NULL) {
-        FormatMessageA(
-            FORMAT_MESSAGE_ALLOCATE_BUFFER |
-                FORMAT_MESSAGE_FROM_SYSTEM |
-                FORMAT_MESSAGE_IGNORE_INSERTS,
-            NULL, GetLastError(), 0, (void *)&buf, 0, NULL);
-        log_err("File %s failed to load: %s.", file_full_path, buf);
-        LocalFree((void *)buf);
-        goto cleanup;
-    }
-#else
     buf = mmap(0, f_len, PROT_READ, MAP_SHARED, fd, 0);
     if (buf == MAP_FAILED) {
         log_err("File %s failed to load: %s.", file_full_path, strerror(errno));
@@ -284,7 +265,6 @@ void search_file(const char *file_full_path) {
     madvise(buf, f_len, MADV_SEQUENTIAL);
 #elif HAVE_POSIX_FADVISE
     posix_fadvise(fd, 0, f_len, POSIX_MADV_SEQUENTIAL);
-#endif
 #endif
 
     if (opts.search_zip_files) {
@@ -307,11 +287,7 @@ void search_file(const char *file_full_path) {
 cleanup:
 
     if (buf != NULL) {
-#ifdef _WIN32
-        UnmapViewOfFile(buf);
-#else
         munmap(buf, f_len);
-#endif
     }
     if (fd != -1) {
         close(fd);
@@ -347,9 +323,6 @@ void *search_file_worker(void *i) {
 }
 
 static int check_symloop_enter(const char *path, dirkey_t *outkey) {
-#ifdef _WIN32
-    return SYMLOOP_OK;
-#else
     struct stat buf;
     symdir_t *item_found = NULL;
     symdir_t *new_item = NULL;
@@ -376,13 +349,9 @@ static int check_symloop_enter(const char *path, dirkey_t *outkey) {
     memcpy(&new_item->key, outkey, sizeof(dirkey_t));
     HASH_ADD(hh, symhash, key, sizeof(dirkey_t), new_item);
     return SYMLOOP_OK;
-#endif
 }
 
 static int check_symloop_leave(dirkey_t *dirkey) {
-#ifdef _WIN32
-    return SYMLOOP_OK;
-#else
     symdir_t *item_found = NULL;
 
     if (dirkey->dev == 0 && dirkey->ino == 0) {
@@ -398,7 +367,6 @@ static int check_symloop_leave(dirkey_t *dirkey) {
     HASH_DELETE(hh, symhash, item_found);
     free(item_found);
     return SYMLOOP_OK;
-#endif
 }
 
 /* TODO: Append matches to some data structure instead of just printing them out.
@@ -487,19 +455,6 @@ void search_dir(ignores *ig, const char *base_path, const char *path, const int 
                     "%s/%s",
                     (path[0] == '/' && path[1] == '\0') ? "" : path,
                     dir->d_name);
-#ifndef _WIN32
-        if (opts.one_dev) {
-            struct stat s;
-            if (lstat(dir_full_path, &s) != 0) {
-                log_err("Failed to get device information for %s. Skipping...", dir->d_name);
-                goto cleanup;
-            }
-            if (s.st_dev != original_dev) {
-                log_debug("File %s crosses a device boundary (is probably a mount point.) Skipping...", dir->d_name);
-                goto cleanup;
-            }
-        }
-#endif
 
         /* If a link points to a directory then we need to treat it as a directory. */
         if (!opts.follow_symlinks && is_symlink(path, dir)) {
